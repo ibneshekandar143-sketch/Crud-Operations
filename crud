@@ -1,0 +1,502 @@
+Folder Structure: 
+Crud operations
+    SCR...
+        main..F
+              java...F
+                    com.exam....P
+                        DBConnectivity.java
+                        Employee.java
+              webapp...P
+                  WEB-INF...F
+                      web.xml
+                  index.xhtml
+
+   pom.xml
+
+
+..........//pom.xml// start.............
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>cdud-jsf-evidence</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>cdud-jsf-evidence</name>
+    <packaging>war</packaging>
+
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- JSF / Jakarta Faces provided by WildFly -->
+        <dependency>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+            <version>10.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- PostgreSQL JDBC Driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.14</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.5.1</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+.................pom.xml End....................
+
+
+
+..........DBConnectivity start..........
+
+package com.exam;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+
+public class DBConnectivity {
+
+    Connection con;
+
+    public Connection connect_to_db() {
+        String url = "jdbc:postgresql://localhost:5432/employee_db";
+        String username = "postgres";
+        String password = "postgres";
+        try {
+//            Class.forName("org.postgresql.Driver");//Loading Driver
+            con = DriverManager.getConnection(url, username, password);
+            if (con != null) {
+                System.out.println("Database connected.");
+            } else {
+                System.out.println("Connection failed");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return con;
+    }
+
+}
+
+  ..........DBConnectivity End...........
+
+
+  ...........Employee Start.....
+
+  /*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package com.exam;
+
+import jakarta.faces.view.ViewScoped;
+import jakarta.inject.Named;
+import java.io.Serializable;
+import java.sql.Connection;
+import java.util.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+
+@Named("employeeBean")
+@ViewScoped
+public class Employee implements Serializable {
+
+    private int empid;
+    private String name;
+    private String email;
+    private String designation;
+    private String department;
+    private double salary;
+    private Date hireDate;
+
+    Employee() {
+
+    }
+
+    public int getEmpid() {
+        return empid;
+    }
+
+    public void setEmpid(int empid) {
+        this.empid = empid;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getDesignation() {
+        return designation;
+    }
+
+    public void setDesignation(String designation) {
+        this.designation = designation;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public double getSalary() {
+        return salary;
+    }
+
+    public void setSalary(double salary) {
+        this.salary = salary;
+    }
+
+    public Date getHireDate() {
+        return hireDate;
+    }
+
+    public void setHireDate(Date hireDate) {
+        this.hireDate = hireDate;
+    }
+
+    private boolean editMode = false;
+
+    public boolean getEditMode() {
+        return editMode;
+    }
+
+    public void setEditMode(boolean editMode) {
+        this.editMode = editMode;
+    }
+
+    public List<Employee> getAllEmployees() {
+        DBConnectivity dbc = new DBConnectivity();
+        ArrayList<Employee> employees = new ArrayList<>();
+        Connection con = dbc.connect_to_db();
+        PreparedStatement pst;
+        try {
+            pst = con.prepareStatement("select * from employee");
+            ResultSet rs = pst.executeQuery();
+            while (rs.next()) {
+                Employee emp = new Employee();
+                emp.setEmpid(rs.getInt("empid"));
+                emp.setName(rs.getString("name"));
+                emp.setEmail(rs.getString("email"));
+                emp.setDesignation(rs.getString("designation"));
+                emp.setDepartment(rs.getString("department"));
+                emp.setHireDate(rs.getDate("hire_date"));
+                emp.setSalary(rs.getDouble("salary"));
+                employees.add(emp);
+            }
+        } catch (SQLException ex) {
+            System.getLogger(Employee.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
+        return employees;
+    }
+
+    public String addEmployee() {
+        DBConnectivity dbc = new DBConnectivity();
+        Connection con = dbc.connect_to_db();
+
+        String sql = "INSERT INTO employee (name, email, designation, department, salary, hire_date) VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+
+            pst.setString(1, name);
+            pst.setString(2, email);
+            pst.setString(3, designation);
+            pst.setString(4, department);
+            pst.setDouble(5, salary);
+
+            if (hireDate != null) {
+                pst.setDate(6, new java.sql.Date(hireDate.getTime()));
+            } else {
+                pst.setNull(6, java.sql.Types.DATE);
+            }
+
+            pst.executeUpdate();
+            clearForm();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // ✅ REDIRECT
+        return "index?faces-redirect=true";
+    }
+
+    public void editEmployee(Employee emp) {
+        this.empid = emp.empid;
+        this.name = emp.name;
+        this.email = emp.email;
+        this.designation = emp.designation;
+        this.department = emp.department;
+        this.salary = emp.salary;
+        this.hireDate = emp.hireDate;
+
+        this.editMode = true;
+    }
+
+    public String updateEmployee() {
+        DBConnectivity dbc = new DBConnectivity();
+        Connection con = dbc.connect_to_db();
+
+        String sql = "UPDATE employee SET name=?, email=?, designation=?, department=?, salary=?, hire_date=? WHERE empid=?";
+
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+
+            pst.setString(1, name);
+            pst.setString(2, email);
+            pst.setString(3, designation);
+            pst.setString(4, department);
+            pst.setDouble(5, salary);
+            pst.setDate(6, new java.sql.Date(hireDate.getTime()));
+            pst.setInt(7, empid);
+
+            pst.executeUpdate();
+            clearForm();
+            editMode = false;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // REDIRECT
+        return "index?faces-redirect=true";
+    }
+
+    private void clearForm() {
+        empid = 0;
+        name = null;
+        email = null;
+        designation = null;
+        department = null;
+        salary = 0;
+        hireDate = null;
+    }
+
+    public void deleteEmployee(Employee emp) {
+        DBConnectivity dbc = new DBConnectivity();
+        Connection con = dbc.connect_to_db();
+
+        String sql = "DELETE FROM employee WHERE empid=?";
+
+        try (PreparedStatement pst = con.prepareStatement(sql)) {
+            pst.setInt(1, emp.getEmpid());
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+}
+
+
+    ............Employee End...........
+
+
+    ..........index.xhtml start.........
+
+    <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core">
+
+<h:head>
+    <title>Employee Form</title>
+</h:head>
+
+<h:body>
+    <h2>
+        <h:outputText
+                value="#{employeeBean.editMode
+                    ? 'Update Employee'
+                    : 'Register New Employee'}"/>
+    </h2>
+    <!-- ================= FORM ================= -->
+    <h:form id="empForm">
+
+        <h:inputHidden value="#{employeeBean.empid}" />
+
+        Name<br/>
+        <h:inputText value="#{employeeBean.name}" /><br/><br/>
+
+        Email<br/>
+        <h:inputText value="#{employeeBean.email}" /><br/><br/>
+
+        Designation<br/>
+        <h:inputText value="#{employeeBean.designation}" /><br/><br/>
+
+        Department<br/>
+        <h:inputText value="#{employeeBean.department}" /><br/><br/>
+
+        Salary<br/>
+        <h:inputText value="#{employeeBean.salary}">
+            <f:convertNumber />
+        </h:inputText><br/><br/>
+
+        Hire Date<br/>
+        <h:inputText value="#{employeeBean.hireDate}" type="date">
+            <f:convertDateTime pattern="yyyy-MM-dd"/>
+        </h:inputText><br/><br/>
+
+        <h:commandButton value="Submit"
+                         action="#{employeeBean.addEmployee}"
+                         rendered="#{!employeeBean.editMode}" />
+
+        <h:commandButton value="Update"
+                         action="#{employeeBean.updateEmployee}"
+                         rendered="#{employeeBean.editMode}" />
+
+    </h:form>
+
+
+    <hr/>
+
+    <!-- ================= DATA TABLE ================= -->
+    <h:form id="tableForm">
+
+        <h:dataTable value="#{employeeBean.allEmployees}" var="emp"
+                     border="1" cellpadding="5">
+
+            <h:column>
+                <f:facet name="header">Name</f:facet>
+                #{emp.name}
+            </h:column>
+
+            <h:column>
+                <f:facet name="header">Email</f:facet>
+                #{emp.email}
+            </h:column>
+
+            <h:column>
+                <f:facet name="header">Designation</f:facet>
+                #{emp.designation}
+            </h:column>
+
+            <h:column>
+                <f:facet name="header">Department</f:facet>
+                #{emp.department}
+            </h:column>
+
+            <h:column>
+                <f:facet name="header">Salary</f:facet>
+                #{emp.salary}
+            </h:column>
+
+            <h:column>
+                <f:facet name="header">Hire Date</f:facet>
+                <h:outputText value="#{emp.hireDate}">
+                    <f:convertDateTime pattern="yyyy-MM-dd"/>
+                </h:outputText>
+            </h:column>
+
+            <h:column>
+                <f:facet name="header">Actions</f:facet>
+
+                <!-- EDIT -->
+                <h:commandLink value="Edit"
+                               action="#{employeeBean.editEmployee(emp)}" />
+
+                &nbsp;|&nbsp;
+
+                <!-- DELETE -->
+                <h:commandLink value="Delete"
+                               action="#{employeeBean.deleteEmployee(emp)}"
+                               onclick="return confirm('Are you sure?');" />
+            </h:column>
+
+        </h:dataTable>
+
+    </h:form>
+
+
+</h:body>
+</html>
+      
+      ...........index.xhtml End.......
+
+
+      
+
+      .........web.xml Start...........
+
+
+      <?xml version="1.0" encoding="UTF-8"?>
+
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="
+         https://jakarta.ee/xml/ns/jakartaee
+         https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+
+    <display-name>Employee Management System</display-name>
+
+    <!-- JSF Servlet -->
+    <servlet>
+        <servlet-name>Faces Servlet</servlet-name>
+        <servlet-class>
+            jakarta.faces.webapp.FacesServlet
+        </servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+
+    <!-- JSF URL Mapping -->
+    <servlet-mapping>
+        <servlet-name>Faces Servlet</servlet-name>
+        <url-pattern>*.xhtml</url-pattern>
+    </servlet-mapping>
+
+    <!-- Default Welcome Page -->
+    <welcome-file-list>
+        <welcome-file>index.xhtml</welcome-file>
+    </welcome-file-list>
+
+</web-app>
+
+    
+
+
+    
+  
+
